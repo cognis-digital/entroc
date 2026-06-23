@@ -1,0 +1,24 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: build
+        run: gcc -O2 -std=c99 -Wall -Wextra -o entroc entroc.c -lm
+      - name: high-entropy file is flagged (exit 2)
+        run: |
+          head -c 8192 /dev/urandom > random.bin
+          set +e
+          out=$(./entroc random.bin --window 256); code=$?
+          echo "$out"; echo "exit=$code"
+          echo "$out" | grep -q '"tool":"entroc"' || exit 1
+          [ "$code" = "2" ] || { echo "expected high-entropy flag (exit 2)"; exit 1; }
+      - name: low-entropy file is not flagged (exit 0)
+        run: |
+          yes A | head -c 8192 > zeros.bin
+          set +e
+          ./entroc zeros.bin --window 256 >/dev/null; code=$?
+          echo "exit=$code"
+          [ "$code" = "0" ] || { echo "expected no flag (exit 0)"; exit 1; }
