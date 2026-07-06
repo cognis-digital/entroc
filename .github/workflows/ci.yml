@@ -45,9 +45,9 @@ jobs:
       - name: smoke test
         shell: bash
         run: |
+          set +e
           ./entroc.exe --version
           ./entroc.exe tests/test_vectors/uniform_256.bin --format text
-          set +e
           ./entroc.exe tests/test_vectors/pem_embedded.txt >/dev/null; code=$?
           echo "pem exit=$code"
           [ "$code" = "2" ] || { echo "expected exit 2 on secret"; exit 1; }
