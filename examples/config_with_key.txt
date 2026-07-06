@@ -1,0 +1,9 @@
+# app config
+db_host = localhost
+db_port = 5432
+tls_key = |
+-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEIObtRo8tkUqoMjeHiUUu2Ljq10oHfj0mv3+X9nyJEE7oAoGCCqGSM49
+AwEHoUQDQgAEXamRt8gS+F1e6QaWE2Qk6M6X7Z0aB9BEj6wI3nMPfEXAMPLEkey0
+-----END EC PRIVATE KEY-----
+log_level = info

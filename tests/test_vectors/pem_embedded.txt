@@ -1,0 +1,7 @@
+config file
+username = admin
+-----BEGIN RSA PRIVATE KEY-----
+MIIBOgIBAAJBAKj34GkxFhD90vcNLYLInFEX6Ppy1tPf9Cnzj4p4WGeKLs1Pt8Qu
+KUpRKfFLfRYC9AIKjbJTWit+CqvjWYzvQwEBAoGAD+onAtVye4ic7VR7V50DF9bO
+-----END RSA PRIVATE KEY-----
+end of file
