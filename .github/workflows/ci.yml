@@ -1,24 +1,55 @@
 name: ci
 on: [push, pull_request]
+
 jobs:
   build-test:
-    runs-on: ubuntu-latest
+    name: build & test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
-      - name: build
-        run: gcc -O2 -std=c99 -Wall -Wextra -o entroc entroc.c -lm
-      - name: high-entropy file is flagged (exit 2)
+
+      - name: build (strict -Werror)
+        run: cc -O2 -std=c99 -Wall -Wextra -Werror -o entroc entroc.c -lm
+
+      - name: unit + behavioral tests
+        run: bash tests/run_tests.sh
+
+      - name: run all demos
+        run: bash examples/run_all.sh
+
+      - name: validate SARIF output is valid JSON
         run: |
-          head -c 8192 /dev/urandom > random.bin
+          head -c 4096 /dev/urandom > /tmp/ci.bin
           set +e
-          out=$(./entroc random.bin --window 256); code=$?
-          echo "$out"; echo "exit=$code"
-          echo "$out" | grep -q '"tool":"entroc"' || exit 1
-          [ "$code" = "2" ] || { echo "expected high-entropy flag (exit 2)"; exit 1; }
-      - name: low-entropy file is not flagged (exit 0)
+          ./entroc /tmp/ci.bin --format sarif > /tmp/ci.sarif
+          python3 -c "import json; d=json.load(open('/tmp/ci.sarif')); assert d['version']=='2.1.0'; print('SARIF ok:', len(d['runs'][0]['results']), 'results')"
+
+      - name: validate JSON output is valid JSON
         run: |
-          yes A | head -c 8192 > zeros.bin
           set +e
-          ./entroc zeros.bin --window 256 >/dev/null; code=$?
-          echo "exit=$code"
-          [ "$code" = "0" ] || { echo "expected no flag (exit 0)"; exit 1; }
+          ./entroc tests/test_vectors/secrets_mix.txt --format json --profile > /tmp/ci.json
+          python3 -c "import json; json.load(open('/tmp/ci.json')); print('JSON ok')"
+
+  build-windows:
+    name: build & smoke test (windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: build with gcc (MinGW, preinstalled on windows runners)
+        shell: bash
+        run: gcc -O2 -std=c99 -Wall -Wextra -Werror -o entroc.exe entroc.c -lm
+      - name: smoke test
+        shell: bash
+        run: |
+          set +e
+          ./entroc.exe --version
+          ./entroc.exe tests/test_vectors/uniform_256.bin --format text
+          ./entroc.exe tests/test_vectors/pem_embedded.txt >/dev/null; code=$?
+          echo "pem exit=$code"
+          [ "$code" = "2" ] || { echo "expected exit 2 on secret"; exit 1; }
+          # stdin path on Windows (binary mode)
+          head -c 2048 /dev/urandom | ./entroc.exe - --window 256 >/dev/null; echo "stdin exit=$?"
